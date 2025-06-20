@@ -19,13 +19,26 @@ export class Game extends Scene {
   preload() {
     Player.preload(this);
     Controls.preload(this);
-    this.load.setPath("assets");
-    this.load.spritesheet("walls_floor", "walls_floor.png", {
-      frameWidth: 64,
-      frameHeight: 64,
-      margin: 0,
-      spacing: 100,
-    });
+    // generate a texture with grey, black and white for tiles without loading a png
+    const canvas = document.createElement("canvas");
+    canvas.width = 96;
+    canvas.height = 32;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Failed to get canvas context");
+    }
+    ctx.fillStyle = "#808080"; // grey
+    ctx.fillRect(0, 0, 32, 32);
+    ctx.fillStyle = "#000000"; // black
+    ctx.fillRect(32, 0, 64, 32);
+    ctx.fillStyle = "#ffffff"; // white
+    ctx.fillRect(64, 0, 96, 32);
+
+    const texture = this.textures.addCanvas("walls_floor", canvas);
+
+    document.body.appendChild(canvas);
+
+    texture?.refresh();
   }
 
   create() {
@@ -37,7 +50,7 @@ export class Game extends Scene {
       height: 10,
     });
 
-    const tileset = map.addTilesetImage("tileset", "walls_floor");
+    const tileset = map.addTilesetImage("tileset", "walls_floor", 32, 32, 0, 0);
     if (!tileset) {
       throw new Error("Failed to create layer");
     }
@@ -54,8 +67,13 @@ export class Game extends Scene {
     layer.fill(1, 0, 0, 1, map.height); // left wall
     layer.fill(1, map.width - 1, 0, 1, map.height); // right wall
 
-    // Remove collision for player (do not enable physics overlap/collision)
-    // If physics was previously enabled, ensure player is not added to physics system
+    layer.fill(1, 0, Math.floor(map.height / 2), Math.floor(map.width / 2), 1); // bottom wall
+
+    // set index 1 tiles to be collidable
+    layer.setCollisionBetween(1, 1);
+
+    // Enable physics for player and constrain to layer
+    this.physics.world.setBounds(0, 0, layer.displayWidth, layer.displayHeight);
 
     this.attackKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE) || null;
     this.controls = new Controls(this);
@@ -63,6 +81,9 @@ export class Game extends Scene {
     Player.createAnimations(this);
 
     this.player = new Player(this, 400, 300);
+    this.physics.add.existing(this.player);
+    (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
+    this.physics.add.collider(this.player, layer);
 
     this.player.setTint(0xff00ff, 0xffff00, 0x0000ff, 0x00ff00);
     this.player.play(`${this.status}_idle_${this.facing}`);
@@ -106,17 +127,24 @@ export class Game extends Scene {
     const debug: string[] = [];
 
     const input = this.controls?.getInput();
-
     if (!input) return;
 
-    const speed = input.force * 5;
-
+    const speed = input.force * 400; // Arcade physics uses pixels/second
     const newFacing = input.angle !== null ? Game.angleToFacing(input.angle) : this.facing;
 
-    if (input.angle !== null) {
-      this.player.x += Math.cos(Phaser.Math.DegToRad(input.angle)) * speed;
-      this.player.y += Math.sin(Phaser.Math.DegToRad(input.angle)) * speed;
+    // Use physics velocity instead of direct position
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    if (body) {
+      if (input.angle !== null && speed > 0) {
+        body.setVelocity(
+          Math.cos(Phaser.Math.DegToRad(input.angle)) * speed,
+          Math.sin(Phaser.Math.DegToRad(input.angle)) * speed
+        );
+      } else {
+        body.setVelocity(0, 0);
+      }
     }
+
     debug.push(`Position: (${this.player.x.toFixed(2)}, ${this.player.y.toFixed(2)})`);
     debug.push(`Speed: ${speed.toFixed(2)}`);
     debug.push(`Facing: ${newFacing} ${this.facing}`);
@@ -131,11 +159,12 @@ export class Game extends Scene {
           console.log("Attack animation completed");
           this.isAttacking = false;
         });
+        if (body) body.setVelocity(0, 0); // Stop movement during attack
         return;
       }
 
-      if (speed > 1) {
-        pose = speed > 3 ? "run" : "walk";
+      if (speed > 40) {
+        pose = speed > 300 ? "run" : "walk";
       } else {
         pose = "idle";
       }
