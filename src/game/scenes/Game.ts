@@ -1,6 +1,7 @@
 import { Scene } from "phaser";
 import { Player } from "../actors/Player";
 import { Controls } from "../Controls";
+import { Bot } from "../actors/Bot";
 
 export class Game extends Scene {
   constructor() {
@@ -10,6 +11,9 @@ export class Game extends Scene {
   private player: Phaser.GameObjects.Sprite;
   private controls: Controls | null = null;
   private text: Phaser.GameObjects.Text;
+  private timeSinceBotSpawn: number = 0;
+  private layer: Phaser.Tilemaps.TilemapLayer;
+  private bots: Phaser.GameObjects.Group;
 
   preload() {
     Player.preload(this);
@@ -66,6 +70,8 @@ export class Game extends Scene {
     // set index 1 tiles to be collidable
     layer.setCollisionBetween(1, 1);
 
+    this.layer = layer;
+
     // Enable physics for player and constrain to layer
     this.physics.world.setBounds(0, 0, layer.displayWidth, layer.displayHeight);
 
@@ -87,9 +93,32 @@ export class Game extends Scene {
       .setScrollFactor(0);
 
     this.physics.world.createDebugGraphic();
+
+    this.bots = new Phaser.GameObjects.Group(this);
+    this.physics.add.collider(this.bots, this.player);
+    this.physics.add.collider(this.bots, this.layer);
+    this.physics.add.collider(this.bots, this.bots);
   }
 
-  update() {
+  update(_time: number, delta: number) {
+    this.timeSinceBotSpawn += delta;
+
+    if (this.timeSinceBotSpawn > 3000 && this.bots.getLength() < 5) {
+      // Spawn a new bot every 3 seconds in a random position
+      const bot = new Bot(
+        this,
+        Phaser.Math.Between(0, this.cameras.main.width),
+        Phaser.Math.Between(0, this.cameras.main.height)
+      );
+      bot.setTarget(this.player);
+
+      bot.setScale(4);
+      this.bots.add(bot);
+      this.add.existing(bot);
+      // make bots collide with the layer
+      this.timeSinceBotSpawn = 0;
+    }
+
     if (!this.player) return;
     const debug: string[] = [];
     const input = this.controls?.getInput();
