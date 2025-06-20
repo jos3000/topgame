@@ -5,11 +5,7 @@ export class Controls {
   private joyStick: { angle: number; force: number } | null = null;
 
   static preload(scene: Phaser.Scene) {
-    scene.load.plugin(
-      "rexvirtualjoystickplugin",
-      "https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js",
-      true
-    );
+    scene.load.plugin("rexvirtualjoystickplugin", "virtualjoystick.js", true);
   }
 
   constructor(scene: Phaser.Scene) {

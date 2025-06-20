@@ -1,6 +1,5 @@
 import { Scene } from "phaser";
 import { Player } from "../actors/Player";
-import { Peer } from "peerjs";
 import { Controls } from "../Controls";
 
 export class Game extends Scene {
@@ -14,90 +13,52 @@ export class Game extends Scene {
   private status: "sword" | "unarmed" = "unarmed";
   private isAttacking: boolean = false;
   private currentAnim: string = "";
-  private clients: Peer.DataConnection[] = [];
-  private host: Peer.DataConnection | null = null;
   private controls: Controls | null = null;
   private text: Phaser.GameObjects.Text;
 
   preload() {
     Player.preload(this);
-    this.load.plugin("rexvirtualjoystickplugin", "virtualjoystick.js", true);
-
     Controls.preload(this);
+    this.load.setPath("assets");
+    this.load.spritesheet("walls_floor", "walls_floor.png", {
+      frameWidth: 64,
+      frameHeight: 64,
+      margin: 0,
+      spacing: 100,
+    });
   }
 
   create() {
-    this.text = this.add
-      .text(10, 10, "", {
-        font: "16px monospace",
-        backgroundColor: "#000000",
-      })
-      .setScrollFactor(0);
+    const map = this.make.tilemap({
+      // data: tileIdxArray,  // [ [], [], ... ]
+      tileWidth: 32,
+      tileHeight: 32,
+      width: 10,
+      height: 10,
+    });
+
+    const tileset = map.addTilesetImage("tileset", "walls_floor");
+    if (!tileset) {
+      throw new Error("Failed to create layer");
+    }
+    const layer = map.createBlankLayer("base", tileset);
+    if (!layer) {
+      throw new Error("Failed to create layer");
+    }
+
+    layer.setCollisionByProperty({ collides: true });
+    layer.setScale(4);
+    // add four walls around the map
+    layer.fill(1, 0, 0, map.width, 1); // top wall
+    layer.fill(1, 0, map.height - 1, map.width, 1); // bottom wall
+    layer.fill(1, 0, 0, 1, map.height); // left wall
+    layer.fill(1, map.width - 1, 0, 1, map.height); // right wall
+
+    // Remove collision for player (do not enable physics overlap/collision)
+    // If physics was previously enabled, ensure player is not added to physics system
 
     this.attackKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE) || null;
     this.controls = new Controls(this);
-    const hostId = window.location.hash?.substring(1) || null;
-
-    const peerId = localStorage.getItem("peerId") || "";
-
-    const peer = new Peer(peerId, { debug: 2 });
-
-    peer.on("open", function (id) {
-      console.log("My peer ID is: " + id);
-      localStorage.setItem("peerId", id); // Store the peer ID in localStorage
-    });
-
-    peer.on("error", (err) => {
-      console.error("Peer error:", err);
-    });
-
-    peer.on("disconnected", () => {
-      console.log("Disconnected from PeerServer");
-    });
-
-    peer.on("close", () => {
-      console.log("Connection closed");
-    });
-
-    peer.on("connection", (conn) => {
-      console.log("Connection established with a client");
-      conn.on("open", () => {
-        console.log("Connected to client:", conn.peer);
-        if (!hostId) {
-          conn.send("Hello from host!");
-        } else {
-          conn.send("Hello from client!");
-        }
-      });
-
-      conn.on("data", (data) => {
-        console.log("Received data from client:", data);
-      });
-      conn.on("error", (err) => {
-        console.error("Connection error:", err);
-      });
-      this.clients.push(conn);
-    });
-
-    if (hostId) {
-      setTimeout(() => {
-        console.log("Connecting to PeerServer as a client");
-        const conn = peer.connect(hostId);
-        conn.on("open", () => {
-          console.log("Connected to PeerServer as " + conn.peer);
-        });
-        conn.on("data", (data) => {
-          console.log("Received data from " + conn.peer, data);
-        });
-        conn.on("error", (err) => {
-          console.error("Connection error:", err);
-        });
-        conn.on("close", () => {
-          console.log("Connection closed with " + conn.peer);
-        });
-        this.host = conn;
-      }, 2000);
-    }
 
     Player.createAnimations(this);
 
@@ -105,6 +66,16 @@ export class Game extends Scene {
 
     this.player.setTint(0xff00ff, 0xffff00, 0x0000ff, 0x00ff00);
     this.player.play(`${this.status}_idle_${this.facing}`);
+
+    this.cameras.main.setBounds(0, 0, layer.displayWidth, layer.displayHeight);
+    this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
+
+    this.text = this.add
+      .text(10, 10, "", {
+        font: "16px monospace",
+        backgroundColor: "#000000",
+      })
+      .setScrollFactor(0);
   }
 
   static angleToFacing(angle: number): "front" | "left" | "right" | "back" {
