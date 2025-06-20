@@ -81,8 +81,6 @@ export class Game extends Scene {
     Player.createAnimations(this);
 
     this.player = new Player(this, 400, 300);
-    this.physics.add.existing(this.player);
-    (this.player.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true);
     this.physics.add.collider(this.player, layer);
 
     this.player.setTint(0xff00ff, 0xffff00, 0x0000ff, 0x00ff00);
@@ -97,6 +95,8 @@ export class Game extends Scene {
         backgroundColor: "#000000",
       })
       .setScrollFactor(0);
+
+    this.physics.world.createDebugGraphic();
   }
 
   static angleToFacing(angle: number): "front" | "left" | "right" | "back" {
@@ -123,18 +123,15 @@ export class Game extends Scene {
 
   update() {
     if (!this.player) return;
-    let pose = "idle";
     const debug: string[] = [];
-
     const input = this.controls?.getInput();
-    if (!input) return;
-
-    const speed = input.force * 400; // Arcade physics uses pixels/second
-    const newFacing = input.angle !== null ? Game.angleToFacing(input.angle) : this.facing;
-
-    // Use physics velocity instead of direct position
     const body = this.player.body as Phaser.Physics.Arcade.Body;
-    if (body) {
+    this.player.update();
+    debug.push(`Body Velocity: (${body.velocity.x.toFixed(2)}, ${body.velocity.y.toFixed(2)})`);
+
+    if (input && body instanceof Phaser.Physics.Arcade.Body) {
+      const speed = input.force * 400; // Arcade physics uses pixels/second
+
       if (input.angle !== null && speed > 0) {
         body.setVelocity(
           Math.cos(Phaser.Math.DegToRad(input.angle)) * speed,
@@ -143,39 +140,11 @@ export class Game extends Scene {
       } else {
         body.setVelocity(0, 0);
       }
-    }
 
-    debug.push(`Position: (${this.player.x.toFixed(2)}, ${this.player.y.toFixed(2)})`);
-    debug.push(`Speed: ${speed.toFixed(2)}`);
-    debug.push(`Facing: ${newFacing} ${this.facing}`);
-    debug.push(`Angle: ${input.angle}`);
-
-    if (!this.isAttacking) {
-      if (this.attackKey && Phaser.Input.Keyboard.JustDown(this.attackKey)) {
-        this.isAttacking = true;
-        pose = "attack";
-        console.log("Attack initiated", `sword_attack_${newFacing}`);
-        this.player.play(`sword_attack_${newFacing}`).on("animationcomplete", () => {
-          console.log("Attack animation completed");
-          this.isAttacking = false;
-        });
-        if (body) body.setVelocity(0, 0); // Stop movement during attack
-        return;
-      }
-
-      if (speed > 40) {
-        pose = speed > 300 ? "run" : "walk";
-      } else {
-        pose = "idle";
-      }
-
-      const anim = `${this.status}_${pose}_${newFacing}`;
-
-      if (anim !== this.currentAnim) {
-        this.player.play({ key: anim, repeat: -1 }, true);
-        this.currentAnim = anim;
-      }
-      this.facing = newFacing || this.facing;
+      debug.push(`Position: (${this.player.x.toFixed(2)}, ${this.player.y.toFixed(2)})`);
+      debug.push(`Force: ${input.force.toFixed(2)}`);
+      debug.push(`Angle: ${input.angle}`);
+      debug.push(`Input Velocity: (${body.velocity.x.toFixed(2)}, ${body.velocity.y.toFixed(2)})`);
     }
 
     this.text.setText(debug.join("\n"));
