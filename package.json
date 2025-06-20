@@ -18,15 +18,16 @@
   "homepage": "https://github.com/phaserjs/template-esbuild-ts#readme",
   "license": "MIT",
   "dependencies": {
+    "peerjs": "^1.5.5",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
-    "vite": "^6.3.5",
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "vite": "^6.3.5"
   },
   "prettier": {
-    "singleQuote": true,
-    "semi": false,
+    "singleQuote": false,
+    "semi": true,
     "trailingComma": "es5",
     "printWidth": 100,
     "tabWidth": 2,

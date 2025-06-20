@@ -40,11 +40,7 @@ export class Player extends Phaser.GameObjects.Sprite {
           status,
           pose,
           direction,
-          length: Array.isArray(length)
-            ? direction !== "back"
-              ? length[0]
-              : length[1]
-            : length,
+          length: Array.isArray(length) ? (direction !== "back" ? length[0] : length[1]) : length,
         }));
       });
     });
@@ -71,7 +67,7 @@ export class Player extends Phaser.GameObjects.Sprite {
     super(scene, x, y, "unarmed_idle_front");
     this.scene.add.existing(this);
     this.setOrigin(0.5, 0.5);
-    this.setScale(2);
+    this.setScale(4);
     this.play("unarmed_idle_front");
   }
 }

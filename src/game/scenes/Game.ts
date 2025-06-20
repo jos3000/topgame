@@ -1,217 +1,183 @@
-import { Scene } from 'phaser'
-import { Player } from '../actors/Player'
+import { Scene } from "phaser";
+import { Player } from "../actors/Player";
+import { Peer } from "peerjs";
+import { Controls } from "../Controls";
 
 export class Game extends Scene {
   constructor() {
-    super('Game')
+    super("Game");
   }
 
-  private cursors: Phaser.Types.Input.Keyboard.CursorKeys
-  private attackKey: Phaser.Input.Keyboard.Key
-  private runKey: Phaser.Input.Keyboard.Key
-  private player: Phaser.GameObjects.Sprite
-  private facing: 'front' | 'left' | 'right' | 'back' = 'front'
-  private status: 'sword' | 'unarmed' = 'unarmed'
-  private isAttacking: boolean = false
-  private currentAnim: string = ''
-  private clients: Peer.DataConnection[] = []
-  private host: Peer.DataConnection | null = null
+  private attackKey: Phaser.Input.Keyboard.Key | null = null;
+  private player: Phaser.GameObjects.Sprite;
+  private facing: "front" | "left" | "right" | "back" = "front";
+  private status: "sword" | "unarmed" = "unarmed";
+  private isAttacking: boolean = false;
+  private currentAnim: string = "";
+  private clients: Peer.DataConnection[] = [];
+  private host: Peer.DataConnection | null = null;
+  private controls: Controls | null = null;
+  private text: Phaser.GameObjects.Text;
 
   preload() {
-    Player.preload(this)
-    this.load.plugin(
-      'rexvirtualjoystickplugin',
-      'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js',
-      true
-    )
+    Player.preload(this);
+    this.load.plugin("rexvirtualjoystickplugin", "virtualjoystick.js", true);
+
+    Controls.preload(this);
   }
 
   create() {
-    this.joyStick = this.plugins
-      .get('rexvirtualjoystickplugin')
-      .add(this, {
-        x: 400,
-        y: 300,
-        radius: 100,
-        base: this.add.circle(0, 0, 100, 0x888888),
-        thumb: this.add.circle(0, 0, 50, 0xcccccc),
-        // dir: '8dir',   // 'up&down'|0|'left&right'|1|'4dir'|2|'8dir'|3
-        // forceMin: 16,
-        // enable: true
+    this.text = this.add
+      .text(10, 10, "", {
+        font: "16px monospace",
+        backgroundColor: "#000000",
       })
-      .on(
-        'update',
-        () => {
-          console.log('Joystick updated', this.joyStick.angle, this.joyStick.force)
-        },
-        this
-      )
-    const hostId = window.location.hash?.substring(1) || null
+      .setScrollFactor(0);
 
-    const peerId = localStorage.getItem('peerId') || null
+    this.attackKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE) || null;
+    this.controls = new Controls(this);
+    const hostId = window.location.hash?.substring(1) || null;
 
-    const peer = new Peer(peerId, { debug: 2 })
+    const peerId = localStorage.getItem("peerId") || "";
 
-    peer.on('open', function (id) {
-      console.log('My peer ID is: ' + id)
-      localStorage.setItem('peerId', id) // Store the peer ID in localStorage
-    })
+    const peer = new Peer(peerId, { debug: 2 });
 
-    peer.on('error', (err) => {
-      console.error('Peer error:', err)
-    })
+    peer.on("open", function (id) {
+      console.log("My peer ID is: " + id);
+      localStorage.setItem("peerId", id); // Store the peer ID in localStorage
+    });
 
-    peer.on('disconnected', () => {
-      console.log('Disconnected from PeerServer')
-    })
+    peer.on("error", (err) => {
+      console.error("Peer error:", err);
+    });
 
-    peer.on('close', () => {
-      console.log('Connection closed')
-    })
+    peer.on("disconnected", () => {
+      console.log("Disconnected from PeerServer");
+    });
 
-    peer.on('connection', (conn) => {
-      console.log('Connection established with a client')
-      conn.on('open', () => {
-        console.log('Connected to client:', conn.peer)
-        if (isHost) {
-          conn.send('Hello from host!')
+    peer.on("close", () => {
+      console.log("Connection closed");
+    });
+
+    peer.on("connection", (conn) => {
+      console.log("Connection established with a client");
+      conn.on("open", () => {
+        console.log("Connected to client:", conn.peer);
+        if (!hostId) {
+          conn.send("Hello from host!");
         } else {
-          conn.send('Hello from client!')
+          conn.send("Hello from client!");
         }
-      })
+      });
 
-      conn.on('data', (data) => {
-        console.log('Received data from client:', data)
-      })
-      conn.on('error', (err) => {
-        console.error('Connection error:', err)
-      })
-      this.clients.push(conn)
-    })
+      conn.on("data", (data) => {
+        console.log("Received data from client:", data);
+      });
+      conn.on("error", (err) => {
+        console.error("Connection error:", err);
+      });
+      this.clients.push(conn);
+    });
 
     if (hostId) {
       setTimeout(() => {
-        console.log('Connecting to PeerServer as a client')
-        const conn = peer.connect(hostId)
-        conn.on('open', () => {
-          console.log('Connected to PeerServer as ' + conn.peer)
-        })
-        conn.on('data', (data) => {
-          console.log('Received data from ' + conn.peer, data)
-        })
-        conn.on('error', (err) => {
-          console.error('Connection error:', err)
-        })
-        conn.on('close', () => {
-          console.log('Connection closed with ' + conn.peer)
-        })
-        this.host = conn
-      }, 2000)
+        console.log("Connecting to PeerServer as a client");
+        const conn = peer.connect(hostId);
+        conn.on("open", () => {
+          console.log("Connected to PeerServer as " + conn.peer);
+        });
+        conn.on("data", (data) => {
+          console.log("Received data from " + conn.peer, data);
+        });
+        conn.on("error", (err) => {
+          console.error("Connection error:", err);
+        });
+        conn.on("close", () => {
+          console.log("Connection closed with " + conn.peer);
+        });
+        this.host = conn;
+      }, 2000);
     }
 
-    Player.createAnimations(this)
+    Player.createAnimations(this);
 
-    this.player = new Player(this, 400, 300)
+    this.player = new Player(this, 400, 300);
 
-    this.player.setTint(0xff00ff, 0xffff00, 0x0000ff, 0x00ff00)
-    this.player.play(`${this.status}_idle_${this.facing}`)
-
-    this.cursors = this.input.keyboard.createCursorKeys()
-    this.attackKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
-    this.runKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
+    this.player.setTint(0xff00ff, 0xffff00, 0x0000ff, 0x00ff00);
+    this.player.play(`${this.status}_idle_${this.facing}`);
   }
 
+  static angleToFacing(angle: number): "front" | "left" | "right" | "back" {
+    if (angle < 45 || angle >= 315) return "right";
+    if (angle <= 135) return "front"; // priortise front for diagonals
+    if (angle <= 225) return "left";
+    return "back";
+  }
+
+  //joystick
+  //buttons
+  // collision
+
+  // -> changes based on rules
+
+  //position
+  //facing
+  //speed
+  //state
+
+  // -> makes animation
+
+  //animation and position and sound
+
   update() {
-    if (!this.player) return
-    let moving = false
-    let newFacing = this.facing
-    let pose = 'idle'
+    if (!this.player) return;
+    let pose = "idle";
+    const debug: string[] = [];
 
-    let speed = 2
+    const input = this.controls?.getInput();
 
-    if (this.runKey.isDown) {
-      speed = 5
+    if (!input) return;
+
+    const speed = input.force * 5;
+
+    const newFacing = input.angle !== null ? Game.angleToFacing(input.angle) : this.facing;
+
+    if (input.angle !== null) {
+      this.player.x += Math.cos(Phaser.Math.DegToRad(input.angle)) * speed;
+      this.player.y += Math.sin(Phaser.Math.DegToRad(input.angle)) * speed;
     }
-    //joystick
-    //buttons
-    // collision
-
-    // -> changes based on rules
-
-    //position
-    //facing
-    //speed
-    //state
-
-    // -> makes animation
-
-    //animation and position and sound
+    debug.push(`Position: (${this.player.x.toFixed(2)}, ${this.player.y.toFixed(2)})`);
+    debug.push(`Speed: ${speed.toFixed(2)}`);
+    debug.push(`Facing: ${newFacing} ${this.facing}`);
+    debug.push(`Angle: ${input.angle}`);
 
     if (!this.isAttacking) {
-      if (this.cursors.left.isDown) {
-        this.player.x -= speed
-        newFacing = 'left'
-        moving = true
-      } else if (this.cursors.right.isDown) {
-        this.player.x += speed
-        newFacing = 'right'
-        moving = true
-      }
-      if (this.cursors.up.isDown) {
-        this.player.y -= speed
-        newFacing = 'back'
-        moving = true
-      } else if (this.cursors.down.isDown) {
-        this.player.y += speed
-        newFacing = 'front'
-        moving = true
+      if (this.attackKey && Phaser.Input.Keyboard.JustDown(this.attackKey)) {
+        this.isAttacking = true;
+        pose = "attack";
+        console.log("Attack initiated", `sword_attack_${newFacing}`);
+        this.player.play(`sword_attack_${newFacing}`).on("animationcomplete", () => {
+          console.log("Attack animation completed");
+          this.isAttacking = false;
+        });
+        return;
       }
 
-      if (this.facing !== newFacing) {
-        if (this.host) {
-          console.log('Sending facing change to host', newFacing)
-          this.host.send({
-            type: 'facing',
-            data: {
-              facing: newFacing,
-            },
-          })
-        }
-        this.clients.forEach((client) => {
-          console.log('Sending facing change to client', client.peer, newFacing)
-          client.send({
-            type: 'facing',
-            data: {
-              facing: newFacing,
-            },
-          })
-        })
-      }
-
-      if (Phaser.Input.Keyboard.JustDown(this.attackKey)) {
-        this.isAttacking = true
-        pose = 'attack'
-        console.log('Attack initiated', `sword_attack_${newFacing}`)
-        this.player.play(`sword_attack_${newFacing}`).on('animationcomplete', () => {
-          console.log('Attack animation completed')
-          this.isAttacking = false
-        })
-        return
-      }
-
-      if (moving) {
-        pose = speed > 3 ? 'run' : 'walk'
+      if (speed > 1) {
+        pose = speed > 3 ? "run" : "walk";
       } else {
-        pose = 'idle'
+        pose = "idle";
       }
 
-      const anim = `${this.status}_${pose}_${newFacing}`
+      const anim = `${this.status}_${pose}_${newFacing}`;
 
       if (anim !== this.currentAnim) {
-        this.player.play({ key: anim, repeat: -1 }, true)
+        this.player.play({ key: anim, repeat: -1 }, true);
+        this.currentAnim = anim;
       }
-      this.currentAnim = anim
-      this.facing = newFacing
+      this.facing = newFacing || this.facing;
     }
+
+    this.text.setText(debug.join("\n"));
   }
 }
