@@ -7,12 +7,7 @@ export class Game extends Scene {
     super("Game");
   }
 
-  private attackKey: Phaser.Input.Keyboard.Key | null = null;
   private player: Phaser.GameObjects.Sprite;
-  private facing: "front" | "left" | "right" | "back" = "front";
-  private status: "sword" | "unarmed" = "unarmed";
-  private isAttacking: boolean = false;
-  private currentAnim: string = "";
   private controls: Controls | null = null;
   private text: Phaser.GameObjects.Text;
 
@@ -66,7 +61,6 @@ export class Game extends Scene {
     layer.fill(1, 0, map.height - 1, map.width, 1); // bottom wall
     layer.fill(1, 0, 0, 1, map.height); // left wall
     layer.fill(1, map.width - 1, 0, 1, map.height); // right wall
-
     layer.fill(1, 0, Math.floor(map.height / 2), Math.floor(map.width / 2), 1); // bottom wall
 
     // set index 1 tiles to be collidable
@@ -75,16 +69,12 @@ export class Game extends Scene {
     // Enable physics for player and constrain to layer
     this.physics.world.setBounds(0, 0, layer.displayWidth, layer.displayHeight);
 
-    this.attackKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE) || null;
     this.controls = new Controls(this);
 
     Player.createAnimations(this);
 
     this.player = new Player(this, 400, 300);
     this.physics.add.collider(this.player, layer);
-
-    this.player.setTint(0xff00ff, 0xffff00, 0x0000ff, 0x00ff00);
-    this.player.play(`${this.status}_idle_${this.facing}`);
 
     this.cameras.main.setBounds(0, 0, layer.displayWidth, layer.displayHeight);
     this.cameras.main.startFollow(this.player, true, 0.05, 0.05);
@@ -99,37 +89,16 @@ export class Game extends Scene {
     this.physics.world.createDebugGraphic();
   }
 
-  static angleToFacing(angle: number): "front" | "left" | "right" | "back" {
-    if (angle < 45 || angle >= 315) return "right";
-    if (angle <= 135) return "front"; // priortise front for diagonals
-    if (angle <= 225) return "left";
-    return "back";
-  }
-
-  //joystick
-  //buttons
-  // collision
-
-  // -> changes based on rules
-
-  //position
-  //facing
-  //speed
-  //state
-
-  // -> makes animation
-
-  //animation and position and sound
-
   update() {
     if (!this.player) return;
     const debug: string[] = [];
     const input = this.controls?.getInput();
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const body = this.player.body;
     this.player.update();
-    debug.push(`Body Velocity: (${body.velocity.x.toFixed(2)}, ${body.velocity.y.toFixed(2)})`);
 
     if (input && body instanceof Phaser.Physics.Arcade.Body) {
+      debug.push(`Body Velocity: (${body.velocity.x.toFixed(2)}, ${body.velocity.y.toFixed(2)})`);
+
       const speed = input.force * 400; // Arcade physics uses pixels/second
 
       if (input.angle !== null && speed > 0) {
@@ -150,3 +119,18 @@ export class Game extends Scene {
     this.text.setText(debug.join("\n"));
   }
 }
+
+//joystick
+//buttons
+// collision
+
+// -> changes based on rules
+
+//position
+//facing
+//speed
+//state
+
+// -> makes animation
+
+//animation and position and sound

@@ -74,6 +74,8 @@ export class Player extends Phaser.GameObjects.Sprite {
 
     this.setOrigin(0.5, 0.5);
     this.setScale(4);
+    this.setTint(0xff00ff, 0xffff00, 0x0000ff, 0x00ff00);
+
     this.play("unarmed_idle_front");
 
     if (this.body instanceof Phaser.Physics.Arcade.Body) {
