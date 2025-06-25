@@ -105,11 +105,30 @@ export class Game extends Scene {
 
     if (this.timeSinceBotSpawn > 3000 && this.bots.getLength() < 5) {
       // Spawn a new bot every 3 seconds in a random position
-      const bot = new Bot(
-        this,
-        Phaser.Math.Between(0, this.cameras.main.width),
-        Phaser.Math.Between(0, this.cameras.main.height)
-      );
+      // find an empty position on the layer
+      const emptyTiles = this.layer.getTilesWithin(0, 0, this.layer.width, this.layer.height, {
+        isColliding: false,
+      });
+
+      if (emptyTiles.length === 0) {
+        console.warn("No empty tiles found for bot spawning");
+        return;
+      }
+      const randomTile = Phaser.Utils.Array.GetRandom(emptyTiles);
+      if (!randomTile) {
+        console.warn("Failed to get a random empty tile for bot spawning");
+        return;
+      }
+      // Create a bot at the random position
+      // Use the tile position to set the bot's position
+      const tileX = randomTile.getCenterX();
+      const tileY = randomTile.getCenterY();
+      if (tileX === undefined || tileY === undefined) {
+        console.warn("Random tile position is undefined for bot spawning");
+        return;
+      }
+      // Ensure the bot is created at a valid position
+      const bot = new Bot(this, tileX, tileY);
       bot.setTarget(this.player);
 
       bot.setScale(4);
