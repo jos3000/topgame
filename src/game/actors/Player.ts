@@ -133,6 +133,10 @@ export class Player extends Phaser.GameObjects.Sprite {
     // if (this.isAttacking) return;
     this.isAttacking = true;
   }
+
+  public getIsAttacking() {
+    return this.isAttacking;
+  }
 }
 
 // if (this.attackKey && Phaser.Input.Keyboard.JustDown(this.attackKey)) {

@@ -162,6 +162,14 @@ export class Game extends Scene {
         this.player.attack();
       }
 
+      // Check for player attack hitting bots
+      if (input && input.attack && this.player.getIsAttacking()) {
+        this.physics.overlap(this.player, this.bots, (_player, bot) => {
+          const b = bot as Bot;
+          b.takeDamage(1);
+        });
+      }
+
       debug.push(`Position: (${this.player.x.toFixed(2)}, ${this.player.y.toFixed(2)})`);
       debug.push(`Force: ${input.force.toFixed(2)}`);
       debug.push(`Angle: ${input.angle}`);

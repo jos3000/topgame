@@ -9,6 +9,7 @@ export class Bot extends Physics.Arcade.Sprite {
   private attackRange: number = 60;
   private attackCooldown: number = 1000; // ms
   private lastAttack: number = 0;
+  private health: number = 3;
 
   constructor(scene: Scene, x: number, y: number, target?: GameObjects.Sprite) {
     super(scene, x, y, "player");
@@ -23,6 +24,15 @@ export class Bot extends Physics.Arcade.Sprite {
 
   setTarget(target: GameObjects.Sprite) {
     this.target = target;
+  }
+
+  public takeDamage(amount: number = 1) {
+    this.health -= amount;
+    this.setTint(0xff0000);
+    this.scene.time.delayedCall(100, () => this.clearTint(), [], this);
+    if (this.health <= 0) {
+      this.destroy();
+    }
   }
 
   preUpdate(time: number, delta: number) {
