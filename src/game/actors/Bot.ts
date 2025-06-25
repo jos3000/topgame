@@ -57,11 +57,10 @@ export class Bot extends Physics.Arcade.Sprite {
       (this.body as Physics.Arcade.Body).setVelocity(0, 0);
       if (time - this.lastAttack > this.attackCooldown) {
         this.isAttacking = true;
-        this.play(`unarmed_attack_${this.facing}`)
-          .once("animationcomplete", () => {
-            this.isAttacking = false;
-            this.lastAttack = time;
-          });
+        this.play(`sword_attack_${this.facing}`).once("animationcomplete", () => {
+          this.isAttacking = false;
+          this.lastAttack = time;
+        });
       } else {
         const anim = `unarmed_idle_${this.facing}`;
         if (anim !== this.currentAnim) {

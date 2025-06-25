@@ -8,8 +8,8 @@ export class Game extends Scene {
     super("Game");
   }
 
-  private player: Phaser.GameObjects.Sprite;
-  private controls: Controls | null = null;
+  private player: Player;
+  private controls: Controls;
   private text: Phaser.GameObjects.Text;
   private timeSinceBotSpawn: number = 0;
   private layer: Phaser.Tilemaps.TilemapLayer;
@@ -156,6 +156,10 @@ export class Game extends Scene {
         );
       } else {
         body.setVelocity(0, 0);
+      }
+
+      if (input.attack) {
+        this.player.attack();
       }
 
       debug.push(`Position: (${this.player.x.toFixed(2)}, ${this.player.y.toFixed(2)})`);

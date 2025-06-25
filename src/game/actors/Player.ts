@@ -2,6 +2,7 @@ export class Player extends Phaser.GameObjects.Sprite {
   // private isAttacking: boolean = false;
   private facing: "front" | "left" | "right" | "back" = "front";
   private status: "sword" | "unarmed" = "unarmed";
+  private isAttacking: boolean = false;
 
   static preload(scene: Phaser.Scene) {
     scene.load.setPath("assets");
@@ -116,8 +117,21 @@ export class Player extends Phaser.GameObjects.Sprite {
       const pose = speed > 300 ? "run" : speed > 20 ? "walk" : "idle";
       const anim = `${this.status}_${pose}_${facing}`;
       this.facing = facing || this.facing;
+
+      if (this.isAttacking) {
+        this.play(`sword_attack_${this.facing}`, true).once("animationcomplete", () => {
+          this.isAttacking = false;
+        });
+        return;
+      }
+
       this.play({ key: anim, repeat: -1 }, true);
     }
+  }
+
+  attack() {
+    // if (this.isAttacking) return;
+    this.isAttacking = true;
   }
 }
 

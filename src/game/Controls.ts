@@ -3,6 +3,8 @@ export class Controls {
   private attackKey: Phaser.Input.Keyboard.Key | null = null;
   private runKey: Phaser.Input.Keyboard.Key | null = null;
   private joyStick: { angle: number; force: number } | null = null;
+  private attackButton: Phaser.GameObjects.Arc | null = null;
+  private attackButtonPressed: boolean = false;
 
   static preload(scene: Phaser.Scene) {
     scene.load.plugin("rexvirtualjoystickplugin", "virtualjoystick.js", true);
@@ -27,11 +29,30 @@ export class Controls {
         forceMax: 100,
         base: scene.add.circle(0, 0, 100, 0x888888),
         thumb: scene.add.circle(0, 0, 50, 0xcccccc),
-        // dir: '8dir',   // 'up&down'|0|'left&right'|1|'4dir'|2|'8dir'|3
-        // forceMin: 16,
-        // enable: true
       });
     }
+
+    // Add attack button (right side)
+    this.attackButton = scene.add
+      .circle(scene.cameras.main.width - 150, scene.cameras.main.height - 150, 60, 0xff4444)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    scene.add
+      .text(scene.cameras.main.width - 150, scene.cameras.main.height - 150, "⚔", {
+        font: "48px sans-serif",
+        color: "#fff",
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0);
+    this.attackButton.on("pointerdown", () => {
+      this.attackButtonPressed = true;
+    });
+    this.attackButton.on("pointerup", () => {
+      this.attackButtonPressed = false;
+    });
+    this.attackButton.on("pointerout", () => {
+      this.attackButtonPressed = false;
+    });
   }
 
   getInput() {
@@ -69,10 +90,12 @@ export class Controls {
 
     const angle = joyStickAngle ?? cursorAngle ?? null;
     const force = (joyStickForce ?? cursorForce ?? 0) / 100;
+    const attack = this.attackKey?.isDown || this.attackButtonPressed || false;
 
     return {
       angle,
       force,
+      attack,
     };
   }
 }
